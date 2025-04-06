@@ -21,9 +21,15 @@ def main():
     prediction = pd.read_csv("prediction.csv")
     coef_sorted = pd.read_csv("coef_sorted.csv")
     
-    # Determine the default slider value as the distinct count of players in prediction
+    # Compute bet_type if it doesn't exist in the prediction dataframe.
+    if 'bet_type' not in prediction.columns:
+        prediction['bet_type'] = np.where(
+            prediction['predictionVodds_win'] >= prediction['predictionVodds_top6'],
+            'win', 'top6'
+        )
+    
+    # Determine the default slider value as the distinct count of players
     n_golfers = prediction['Player'].nunique()
-    # Slider label changed here:
     threshold = st.slider("Choose number of golfers to include", min_value=1, max_value=n_golfers, value=n_golfers, step=1)
     
     # Dynamic table: Filter predictions for underpriced players meeting the threshold
@@ -49,9 +55,9 @@ def main():
     st.write("""
     In this section, we calculate the optimal betting allocation for undervalued players based on their expected value (EV).
     We identify players who are underpriced by comparing the simulated win percentages with the bookmakers' implied probabilities.
-    For these players, the absolute difference (predictionVodds_win) serves as a weight for allocating the bet.
-    These weights are then normalized so that the suggested bet percentages sum to 100% of your total pot.
-    A minimum bet of £0.50 is enforced, and the final recommended bets are adjusted accordingly.
+    For these players, the absolute difference (predictionVodds_win) is used as a weight to compute the suggested bet percentage.
+    These weights are then normalized so that the suggested bet percentages sum to 100% of your total bet pot.
+    A minimum bet of £0.50 is enforced, and the final recommendations also indicate whether you should bet on a win or a top 6 finish.
     """)
     
     # Let the user input their total bet pot (e.g. £100)
@@ -60,12 +66,13 @@ def main():
     # Calculate betting recommendations using the prediction DataFrame
     bet_candidates = prediction[(prediction['priced'] == 'under') & (prediction['Odds_rank'] < threshold)].copy()
     
-    # Create 'suggested bet %' based on the absolute value of predictionVodds_win
-    if 'suggested bet %' not in bet_candidates.columns:
-        bet_candidates['suggested bet %'] = bet_candidates['predictionVodds_win'].abs()
-    
-    total_weight = bet_candidates['suggested bet %'].sum()
-    bet_candidates['suggested bet %'] = bet_candidates['suggested bet %'] / total_weight * 100
+    # Create 'suggested bet %' using the provided logic:
+    mask = bet_candidates['priced'] == 'under'
+    under_weights = bet_candidates.loc[mask, 'predictionVodds_win'].abs()
+    total_weight = under_weights.sum()
+    bet_candidates.loc[mask, 'suggested bet %'] = (under_weights / total_weight) * 100
+    bet_candidates.loc[~mask, 'suggested bet %'] = 0
+    bet_candidates['suggested bet %'] = bet_candidates['suggested bet %'].round(2)
     
     # Compute the bet amount for each candidate
     bet_candidates['bet_amount'] = total_bet * (bet_candidates['suggested bet %'] / 100)
@@ -79,14 +86,14 @@ def main():
         bet_candidates['normalized_suggested_bet %'] = bet_candidates['suggested bet %'] / new_total * 100
         bet_candidates['bet_amount'] = total_bet * (bet_candidates['normalized_suggested_bet %'] / 100)
     
-    # Format bet_amount as currency
+    # Format bet_amount as currency (£X.XX)
     bet_candidates['bet_amount'] = bet_candidates['bet_amount'].apply(lambda x: f"£{x:.2f}")
     
     st.subheader("Betting Recommendations")
     if bet_candidates.empty:
         st.write("No players meet the minimum bet criteria based on the current threshold and total bet pot.")
     else:
-        st.dataframe(bet_candidates[['Player', 'normalized_suggested_bet %', 'bet_amount']])
+        st.dataframe(bet_candidates[['Player', 'normalized_suggested_bet %', 'bet_amount', 'bet_type']])
     
     # Display golfmoney image after the betting section
     st.image("golfmoney.jpg", use_container_width=True)
