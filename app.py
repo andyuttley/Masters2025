@@ -16,17 +16,18 @@ def main():
     The predictions are compared against bookies' odds to identify undervalued players with positive expected value.
     The feature importance table shows which SG metrics have the greatest influence on the model's predictions.
     """)
-    
+
     # Load data from CSV files
     prediction = pd.read_csv("prediction.csv")
     coef_sorted = pd.read_csv("coef_sorted.csv")
     
-    # Compute bet_type if it doesn't exist in the prediction dataframe.
-    if 'bet_type' not in prediction.columns:
-        prediction['bet_type'] = np.where(
-            prediction['predictionVodds_win'] >= prediction['predictionVodds_top6'],
-            'win', 'top6'
-        )
+    # New section: Predicted Top 6 based solely on the model's simulated win percentage
+    st.subheader("Predicted Top 6")
+    st.write("Below are the top 6 golfers as predicted by the model based solely on simulated win percentage, before considering whether they are good value with the bookies.")
+    predicted_top6 = prediction.sort_values(by="simulated_win_percentage", ascending=False).head(6)
+    # Rename column for display if desired
+    predicted_top6 = predicted_top6.rename(columns={"simulated_win_percentage": "Model Win %"})
+    st.dataframe(predicted_top6[["Player", "Model Win %"]])
     
     # Determine the default slider value as the distinct count of players
     n_golfers = prediction['Player'].nunique()
