@@ -30,7 +30,7 @@ def main():
     filtered_prediction = prediction[(prediction['priced'] == 'under') & (prediction['Odds_rank'] < threshold)]
     
     # Reorder columns: first "Player", then "simulated_win_percentage" renamed to "Model Prediction", 
-    # then "odds_Win Probability (%)" renamed to "Odds Prediction", followed by the remaining columns.
+    # then "odds_Win Probability (%)" renamed to "Odds Prediction", followed by the rest.
     display_df = filtered_prediction.copy()
     display_df = display_df.rename(columns={
         "simulated_win_percentage": "Model Prediction",
@@ -50,26 +50,22 @@ def main():
     In this section, we calculate the optimal betting allocation for undervalued players based on their expected value (EV).
     We identify players who are underpriced by comparing the simulated win percentages with the bookmakers' implied probabilities.
     For these players, the absolute difference (predictionVodds_win) serves as a weight for allocating the bet.
-    These weights are normalized so that the suggested bet percentages sum to 100% of your total pot.
-    A minimum bet of £0.50 is enforced, and in addition, we determine whether you should bet on a player's outright win or just a top 6 finish.
+    These weights are then normalized so that the suggested bet percentages sum to 100% of your total pot.
+    A minimum bet of £0.50 is enforced, and the final recommended bets are adjusted accordingly.
     """)
     
-    # Let the user input their total bet pot (e.g., £100)
+    # Let the user input their total bet pot (e.g. £100)
     total_bet = st.number_input("Enter your total bet pot (£)", value=100.0, step=1.0)
     
     # Calculate betting recommendations using the prediction DataFrame
     bet_candidates = prediction[(prediction['priced'] == 'under') & (prediction['Odds_rank'] < threshold)].copy()
     
-    # Calculate suggested bet % using the absolute value of predictionVodds_win as weight
+    # Create 'suggested bet %' based on the absolute value of predictionVodds_win
     if 'suggested bet %' not in bet_candidates.columns:
         bet_candidates['suggested bet %'] = bet_candidates['predictionVodds_win'].abs()
     
     total_weight = bet_candidates['suggested bet %'].sum()
     bet_candidates['suggested bet %'] = bet_candidates['suggested bet %'] / total_weight * 100
-    
-    # Determine bet type: "win" if EV for winning is higher or equal to top6 EV, else "top6"
-    bet_candidates['bet_type'] = np.where(bet_candidates['predictionVodds_win'] >= bet_candidates['predictionVodds_top6'],
-                                          'win', 'top6')
     
     # Compute the bet amount for each candidate
     bet_candidates['bet_amount'] = total_bet * (bet_candidates['suggested bet %'] / 100)
@@ -83,14 +79,14 @@ def main():
         bet_candidates['normalized_suggested_bet %'] = bet_candidates['suggested bet %'] / new_total * 100
         bet_candidates['bet_amount'] = total_bet * (bet_candidates['normalized_suggested_bet %'] / 100)
     
-    # Format bet_amount as currency (£X.XX)
+    # Format bet_amount as currency
     bet_candidates['bet_amount'] = bet_candidates['bet_amount'].apply(lambda x: f"£{x:.2f}")
     
     st.subheader("Betting Recommendations")
     if bet_candidates.empty:
         st.write("No players meet the minimum bet criteria based on the current threshold and total bet pot.")
     else:
-        st.dataframe(bet_candidates[['Player', 'normalized_suggested_bet %', 'bet_amount', 'bet_type']])
+        st.dataframe(bet_candidates[['Player', 'normalized_suggested_bet %', 'bet_amount']])
     
     # Display golfmoney image after the betting section
     st.image("golfmoney.jpg", use_container_width=True)
