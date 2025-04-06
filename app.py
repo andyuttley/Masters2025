@@ -4,7 +4,7 @@ import numpy as np
 
 def main():
     # Display Augusta image at the top
-    st.image("augusta_image.jpeg", use_column_width=True)
+    st.image("augusta_image.jpeg", use_container_width=True)
     
     # Header and description
     st.title("Masters Tournament Prediction Analysis")
@@ -21,15 +21,28 @@ def main():
     prediction = pd.read_csv("prediction.csv")
     coef_sorted = pd.read_csv("coef_sorted.csv")
     
-    # Determine the default slider value as the distinct count of players
+    # Determine the default slider value as the distinct count of players in prediction
     n_golfers = prediction['Player'].nunique()
-    threshold = st.slider("Odds Rank Threshold", min_value=1, max_value=n_golfers, value=n_golfers, step=1)
+    # Slider label changed here:
+    threshold = st.slider("Choose number of golfers to include", min_value=1, max_value=n_golfers, value=n_golfers, step=1)
     
-    # Dynamic table: Filter predictions for underpriced players that meet the Odds_rank threshold
+    # Dynamic table: Filter predictions for underpriced players meeting the threshold
     filtered_prediction = prediction[(prediction['priced'] == 'under') & (prediction['Odds_rank'] < threshold)]
     
+    # Reorder columns: first "Player", then "simulated_win_percentage" renamed to "Model Prediction", 
+    # then "odds_Win Probability (%)" renamed to "Odds Prediction", followed by the rest.
+    display_df = filtered_prediction.copy()
+    display_df = display_df.rename(columns={
+        "simulated_win_percentage": "Model Prediction",
+        "odds_Win Probability (%)": "Odds Prediction"
+    })
+    fixed_cols = ["Player", "Model Prediction", "Odds Prediction"]
+    other_cols = [col for col in display_df.columns if col not in fixed_cols]
+    new_order = fixed_cols + other_cols
+    display_df = display_df[new_order]
+    
     st.subheader(f"Only include top {threshold} golfers")
-    st.dataframe(filtered_prediction)
+    st.dataframe(display_df)
     
     # Betting Section
     st.subheader("Betting Section")
@@ -41,13 +54,13 @@ def main():
     A minimum bet of £0.50 is enforced, and the final recommended bets are adjusted accordingly.
     """)
     
-    # Let the user input their total bet pot (e.g., £100)
+    # Let the user input their total bet pot (e.g. £100)
     total_bet = st.number_input("Enter your total bet pot (£)", value=100.0, step=1.0)
     
     # Calculate betting recommendations using the prediction DataFrame
     bet_candidates = prediction[(prediction['priced'] == 'under') & (prediction['Odds_rank'] < threshold)].copy()
     
-    # Calculate suggested bet percentage based on the absolute value of predictionVodds_win weights
+    # Create 'suggested bet %' based on the absolute value of predictionVodds_win
     if 'suggested bet %' not in bet_candidates.columns:
         bet_candidates['suggested bet %'] = bet_candidates['predictionVodds_win'].abs()
     
@@ -60,7 +73,7 @@ def main():
     # Filter out players with a bet amount below £0.50
     bet_candidates = bet_candidates[bet_candidates['bet_amount'] >= 0.50]
     
-    # If any players remain, re-normalize suggested bet % so that they sum to 100%
+    # If players remain, re-normalize suggested bet % so that they sum to 100%
     if not bet_candidates.empty:
         new_total = bet_candidates['suggested bet %'].sum()
         bet_candidates['normalized_suggested_bet %'] = bet_candidates['suggested bet %'] / new_total * 100
@@ -76,7 +89,7 @@ def main():
         st.dataframe(bet_candidates[['Player', 'normalized_suggested_bet %', 'bet_amount']])
     
     # Display golfmoney image after the betting section
-    st.image("golfmoney.jpg", use_column_width=True)
+    st.image("golfmoney.jpg", use_container_width=True)
     
     # Feature Importance section (moved to bottom)
     st.subheader("Feature Importance")
