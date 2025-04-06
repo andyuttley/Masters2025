@@ -29,6 +29,10 @@ def main():
     predicted_top6 = predicted_top6.rename(columns={"simulated_win_percentage": "Model Win %"})
     st.dataframe(predicted_top6[["Player", "Model Win %"]])
     
+     # New section: considering only golfers that are good value
+    st.subheader("Expected Value (only betting on those that are undervalued")
+    st.write("EV, or expected value, here is the difference between our model’s predicted win probability for a golfer and the bookmaker’s implied win probability from the odds. If our model predicts a higher chance of winning than the odds suggest, the golfer is undervalued, meaning a bet on them should, on average, return a profit over time.")
+    
     # Determine the default slider value as the distinct count of players
     n_golfers = prediction['Player'].nunique()
     threshold = st.slider("Choose number of golfers to include", min_value=1, max_value=n_golfers, value=n_golfers, step=1)
