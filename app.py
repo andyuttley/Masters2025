@@ -10,7 +10,8 @@ def main():
     st.title("Masters Tournament Prediction Analysis")
     st.header("Predicting 2025 Masters Outcomes Using Strokes Gained Data")
     st.write("""
-    This app leverages strokes gained (SG) data and historical Masters tournament outcomes to build a linear regression model.
+    This app leverages strokes gained (SG) data and historical Masters tournament outcomes to build a mixture of models.
+    The models tested are: Linear Regression, Random Forest, XGBoost, and Gradient Boosting. 
     The model is backtested on previous Masters tournaments and then applied to predict the 2025 tournament.
     A Monte Carlo simulation is used to estimate each player's win and top finish probabilities.
     The predictions are compared against bookies' odds to identify undervalued players with positive expected value.
@@ -19,7 +20,7 @@ def main():
 
     # Load data from CSV files
     prediction = pd.read_csv("prediction.csv")
-    coef_sorted = pd.read_csv("coef_sorted.csv")
+  
     
     # New section: Predicted Top 6 based solely on the model's simulated win percentage
     st.subheader("Predicted Top 6")
@@ -103,16 +104,7 @@ def main():
     # Display golfmoney image after the betting section
     st.image("golfmoney.jpg", use_container_width=True)
     
-    # Feature Importance section (moved to bottom)
-    st.subheader("Feature Importance")
-    st.write("""
-    The feature importance table below shows the impact of each strokes gained (SG) metric on the predicted Masters average score.
-    Higher absolute values indicate a greater influence on the model's prediction.
-    This information provides insight into which aspects of a player's game are most crucial for success.
-    It also helps in understanding the model's decision-making process.
-    These insights can guide strategy adjustments on the course and in betting decisions.
-    """)
-    st.dataframe(coef_sorted)
+    
     
     # Full Prediction Data section (moved to bottom)
     st.subheader("Full Prediction Data")
